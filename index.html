@@ -38,6 +38,8 @@
     <!-- Leaflet Map CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Supabase: autenticación y base de datos en la nube -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- HTML2PDF Library for Contract Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
@@ -77,6 +79,7 @@
             <div class="flex items-center gap-2 font-semibold">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>AlquilaAqui • Plataforma Inmobiliaria</span>
+                <span id="cloud-status-label" class="ml-2 rounded-full border border-white/20 px-2 py-1 text-[10px]">Modo local</span>
             </div>
             <button type="button" onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition" title="Cambiar tema">
                 <i id="login-theme-icon" class="fa-solid fa-moon"></i>
@@ -555,14 +558,40 @@
                     </div>
                 </div>
 
+                <!-- Accesos rápidos del panel administrativo -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <button type="button" onclick="scrollAdminTo('admin-users-section')" class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-teal-500 rounded-2xl p-4 shadow-sm transition">
+                        <i class="fa-solid fa-users-gear text-teal-600 text-lg"></i>
+                        <div class="font-bold text-sm text-gray-900 dark:text-white mt-2">Usuarios</div>
+                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Cuentas y permisos</div>
+                    </button>
+                    <button type="button" onclick="scrollAdminTo('admin-appointments-section')" class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-teal-500 rounded-2xl p-4 shadow-sm transition">
+                        <i class="fa-solid fa-calendar-check text-amber-500 text-lg"></i>
+                        <div class="font-bold text-sm text-gray-900 dark:text-white mt-2">Citas</div>
+                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Solicitudes y visitas</div>
+                    </button>
+                    <button type="button" onclick="scrollAdminTo('admin-properties-section')" class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-teal-500 rounded-2xl p-4 shadow-sm transition">
+                        <i class="fa-solid fa-building-shield text-indigo-500 text-lg"></i>
+                        <div class="font-bold text-sm text-gray-900 dark:text-white mt-2">Inmuebles</div>
+                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Catálogo y moderación</div>
+                    </button>
+                    <button type="button" onclick="scrollAdminTo('admin-verifications-section')" class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-teal-500 rounded-2xl p-4 shadow-sm transition"><i class="fa-solid fa-id-card text-emerald-600 text-lg"></i><div class="font-bold text-sm text-gray-900 dark:text-white mt-2">Verificaciones</div><div class="text-[11px] text-gray-500 dark:text-gray-400">Identidad de propietarios</div></button>
+                    <button type="button" onclick="scrollAdminTo('admin-reports-section')" class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-teal-500 rounded-2xl p-4 shadow-sm transition"><i class="fa-solid fa-flag text-rose-600 text-lg"></i><div class="font-bold text-sm text-gray-900 dark:text-white mt-2">Denuncias</div><div class="text-[11px] text-gray-500 dark:text-gray-400">Seguridad de anuncios</div></button>
+                    <button type="button" onclick="exportAdminReportJSON()" class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-teal-500 rounded-2xl p-4 shadow-sm transition">
+                        <i class="fa-solid fa-cloud-arrow-down text-sky-600 text-lg"></i>
+                        <div class="font-bold text-sm text-gray-900 dark:text-white mt-2">Respaldo</div>
+                        <div class="text-[11px] text-gray-500 dark:text-gray-400">Exportar información</div>
+                    </button>
+                </div>
+
                 <!-- Gestión de Usuarios y Roles -->
-                <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div id="admin-users-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700">
                     <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-5">
                         <div>
                             <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 <i class="fa-solid fa-users-gear text-primary-600"></i> Gestión de Usuarios y Roles
                             </h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Filtra cuentas, asigna permisos de publicación o cambia roles (Administrador, Propietario o Inquilino).</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Filtra cuentas y asigna permisos de publicación. Solo la cuenta principal tiene acceso de administrador.</p>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
                             <input type="text" id="admin-user-search" oninput="renderAdminPanel()" placeholder="Buscar usuario o correo..." class="px-3 py-2 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
@@ -571,7 +600,6 @@
                                 <select id="admin-new-user-role" class="px-2.5 py-2 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl dark:text-white">
                                     <option value="owner">Propietario (Puede Publicar)</option>
                                     <option value="tenant">Inquilino (Solo Explorar)</option>
-                                    <option value="admin">Administrador</option>
                                 </select>
                                 <button type="submit" class="bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition whitespace-nowrap">
                                     + Asignar Rol
@@ -597,7 +625,7 @@
                 </div>
 
                 <!-- Control Global de Solicitudes de Visitas -->
-                <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div id="admin-appointments-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
                         <div>
                             <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -610,7 +638,7 @@
                 </div>
 
                 <!-- Moderación Amplia de Todas las Publicaciones -->
-                <div class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div id="admin-properties-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
                         <div>
                             <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -621,6 +649,23 @@
                         <input type="text" id="admin-prop-search" oninput="renderAdminPanel()" placeholder="Filtrar inmueble, sector o dueño..." class="w-full sm:w-64 px-3.5 py-2 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
                     </div>
                     <div id="admin-all-properties-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+                </div>
+
+                <div id="admin-verifications-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-lg font-bold mb-1">Verificación de propietarios</h3><p class="text-xs text-gray-500 mb-4">Aprueba o rechaza solicitudes de identidad antes de habilitar publicaciones.</p>
+                    <div id="admin-verifications-list" class="space-y-3"><p class="text-xs text-gray-400">Conecta Supabase para revisar solicitudes.</p></div>
+                </div>
+                <div id="admin-reports-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-lg font-bold mb-1">Denuncias y seguridad</h3><p class="text-xs text-gray-500 mb-4">Revisa anuncios reportados por usuarios.</p>
+                    <div id="admin-reports-list" class="space-y-3"><p class="text-xs text-gray-400">No hay denuncias cargadas.</p></div>
+                </div>
+                <div id="admin-payments-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-lg font-bold mb-1">Reservas y pagos</h3><p class="text-xs text-gray-500 mb-4">Seguimiento de registros de pago. El cobro real requiere integrar una pasarela y validar sus webhooks en servidor.</p>
+                    <div id="admin-payments-list" class="space-y-3"><p class="text-xs text-gray-400">No hay registros de pago.</p></div>
+                </div>
+                <div id="admin-audit-section" class="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-lg font-bold mb-1">Historial administrativo</h3><p class="text-xs text-gray-500 mb-4">Registro de acciones de moderación y gestión.</p>
+                    <div id="admin-audit-list" class="space-y-2"><p class="text-xs text-gray-400">Aún no hay acciones registradas.</p></div>
                 </div>
             </div>
         </div>
@@ -767,7 +812,9 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <div class="flex flex-wrap items-center space-x-2 w-full sm:w-auto">
+                        <button onclick="startPropertyChat()" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm px-3 py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-2"><i class="fa-regular fa-comments"></i><span>Chat</span></button>
+                        <button onclick="reportActiveProperty()" class="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-semibold text-sm px-3 py-2.5 rounded-xl transition flex items-center justify-center gap-2"><i class="fa-regular fa-flag"></i><span>Denunciar</span></button>
                         <button id="btn-schedule-visit" onclick="openAppointmentModalFromDetail()" class="flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-2">
                             <i class="fa-regular fa-calendar-plus"></i>
                             <span>Agendar Visita</span>
@@ -1174,7 +1221,7 @@
 
                 <div class="bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 rounded-xl p-3 text-xs text-teal-800 dark:text-teal-200 flex items-start gap-2">
                     <i class="fa-solid fa-shield-halved mt-0.5 text-teal-600 dark:text-teal-400"></i>
-                    <span>Tus datos de identidad y teléfono se usarán para validar tus publicaciones y facilitar el contacto directo con los interesados.</span>
+                    <span>Tu solicitud será revisada por administración. Por seguridad, solo se conservarán los últimos 4 dígitos del documento; no envíes fotografías ni números completos por el chat.</span>
                 </div>
 
                 <label class="flex items-start space-x-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer pt-1">
@@ -1184,11 +1231,23 @@
 
                 <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-xl transition shadow-md flex items-center justify-center gap-2">
                     <i class="fa-solid fa-check-circle"></i>
-                    <span>Guardar Datos y Continuar a Publicar</span>
+                    <span>Enviar para revisión</span>
                 </button>
             </form>
         </div>
     </div>
+
+
+    <!-- Centro de comunicación, notificaciones, pagos y denuncias -->
+    <div id="modal-inbox" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+        <div class="p-4 border-b dark:border-gray-700 flex items-center justify-between"><div><h3 class="font-bold text-lg">Mensajes de AlquilaAqui</h3><p class="text-xs text-gray-500">Comunícate dentro de la plataforma</p></div><button onclick="closeModal('modal-inbox')" class="p-2">✕</button></div>
+        <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-0 flex-1"><div id="inbox-conversations" class="border-r dark:border-gray-700 overflow-y-auto p-3 space-y-2"><p class="text-xs text-gray-400">Cargando conversaciones…</p></div><div class="flex flex-col min-h-[360px]"><div id="inbox-messages" class="flex-1 overflow-y-auto p-4 space-y-2"><p class="text-sm text-gray-400">Selecciona una conversación.</p></div><form onsubmit="sendChatMessage(event)" class="p-3 border-t dark:border-gray-700 flex gap-2"><input id="chat-message-input" maxlength="5000" required placeholder="Escribe un mensaje…" class="min-w-0 flex-1 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm"><button class="bg-teal-600 text-white rounded-xl px-4 text-sm font-bold">Enviar</button></form></div></div>
+      </div>
+    </div>
+    <div id="modal-notifications" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3"><div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto p-5"><div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg">Notificaciones</h3><button onclick="closeModal('modal-notifications')">✕</button></div><div id="notifications-list" class="space-y-3"></div></div></div>
+    <div id="modal-payments" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3"><div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto p-5"><div class="flex justify-between items-center mb-2"><h3 class="font-bold text-lg">Reservas y pagos</h3><button onclick="closeModal('modal-payments')">✕</button></div><p class="text-xs text-gray-500 mb-4">Consulta el estado de tus pagos. Los cobros en línea se habilitarán al conectar una pasarela segura.</p><div id="user-payments-list" class="space-y-3"></div></div></div>
+    <div id="modal-report-property" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3"><form onsubmit="submitPropertyReport(event)" class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-5"><div class="flex justify-between mb-3"><h3 class="font-bold">Denunciar inmueble</h3><button type="button" onclick="closeModal('modal-report-property')">✕</button></div><p id="report-property-name" class="text-xs text-gray-500 mb-3"></p><label class="text-xs font-semibold">Motivo</label><select id="report-reason" class="w-full p-2 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm my-2"><option>Posible estafa</option><option>Información falsa</option><option>Propiedad no disponible</option><option>Contenido inapropiado</option><option>Otro</option></select><textarea id="report-details" required maxlength="1500" rows="3" placeholder="Describe el problema…" class="w-full p-3 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm"></textarea><button class="w-full mt-3 bg-rose-600 text-white rounded-xl py-2.5 font-bold">Enviar denuncia</button></form></div>
 
     <!-- SCRIPT TÉCNICO REGISTRO PWA Y SERVICE WORKER -->
     <script>
@@ -1502,7 +1561,16 @@
         ];
 
         // STATE MANAGEMENT & ADMIN CONFIG
-        const SUPER_ADMIN_EMAIL = 'yorielsanchez5@gmail.com';
+        // CONFIGURA estos dos valores desde tu proyecto Supabase (Project Settings > API).
+        // La anon/publishable key es pública por diseño; NUNCA coloques service_role aquí.
+        const SUPABASE_CONFIG = {
+            url: 'https://TU-PROYECTO.supabase.co',
+            anonKey: 'TU_SUPABASE_ANON_KEY'
+        };
+        let supabaseClient = null;
+        let cloudReady = false;
+        let cloudSyncQueue = Promise.resolve();
+        const SUPER_ADMIN_EMAIL = 'yorielsanchez5@gmail.com'; // Solo identifica visualmente la cuenta principal; el permiso real viene del rol en Supabase.
         let properties = [];
         let filteredProperties = [];
         let favorites = [];
@@ -1514,11 +1582,17 @@
         let detailMap = null;
         let mapMarkers = [];
         let activeProperty = null;
+        let activeConversationId = null;
+        let ownerVerificationQueue = [];
+        let propertyReports = [];
+        let paymentRecords = [];
+        let userNotifications = [];
 
         // INITIALIZATION
-        window.onload = function() {
-            loadLocalStorageData();
+        window.onload = async function() {
+            loadLocalStorageData(); // respaldo local y modo demostración
             initTheme();
+            await initializeAlquilaAquiCloud();
             checkInitialSession();
             renderUserNav();
             applyFilters();
@@ -1527,20 +1601,163 @@
 
         // LOCAL STORAGE LOAD & SAVE
         function ensureSuperAdminInDirectory() {
-            const adminIdx = usersDirectory.findIndex(u => u.email.toLowerCase() === SUPER_ADMIN_EMAIL);
-            if (adminIdx === -1) {
-                usersDirectory.unshift({
-                    id: 'user-admin-yoriel',
-                    name: 'Yoriel Sánchez',
-                    email: SUPER_ADMIN_EMAIL,
-                    role: 'admin',
-                    canPublish: true,
-                    createdAt: new Date().toISOString()
-                });
-            } else {
-                usersDirectory[adminIdx].role = 'admin';
-                usersDirectory[adminIdx].canPublish = true;
+            // Seguridad: no se crea un administrador desde el cliente.
+            // Los roles administrativos se asignan directamente en Supabase.
+        }
+
+        async function initializeAlquilaAquiCloud() {
+            const configured = SUPABASE_CONFIG.url.startsWith('https://') &&
+                !SUPABASE_CONFIG.url.includes('TU-PROYECTO') &&
+                SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes('TU_SUPABASE');
+            if (!configured || !window.supabase?.createClient) {
+                console.info('AlquilaAqui: modo local activo. Configura Supabase para activar la nube.');
+                return;
             }
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+                    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+                });
+                cloudReady = true;
+                const cloudLabel = document.getElementById('cloud-status-label'); if (cloudLabel) cloudLabel.textContent = 'Nube conectada';
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (error) throw error;
+                if (session?.user) await hydrateCloudUser(session.user);
+                else { currentUser = null; localStorage.removeItem('af_user'); }
+                await loadCloudData();
+                supabaseClient.auth.onAuthStateChange((_event, sessionNow) => {
+                    if (!sessionNow?.user) {
+                        currentUser = null;
+                        renderUserNav();
+                        return;
+                    }
+                    // Evita operaciones de red dentro del callback síncrono de auth.
+                    setTimeout(async () => {
+                        await hydrateCloudUser(sessionNow.user);
+                        await loadCloudData();
+                        renderUserNav();
+                        applyFilters();
+                    }, 0);
+                });
+                console.info('AlquilaAqui conectado a Supabase.');
+            } catch (err) {
+                cloudReady = false;
+                console.error('Error conectando Supabase:', err);
+                showToast('No se pudo conectar con la nube. Revisa la configuración de Supabase.');
+            }
+        }
+
+        async function hydrateCloudUser(authUser) {
+            if (!supabaseClient || !authUser) return;
+            let { data: profile, error } = await supabaseClient
+                .from('profiles').select('*').eq('id', authUser.id).maybeSingle();
+            if (error) throw error;
+            if (!profile) {
+                const { data: created, error: createError } = await supabaseClient.from('profiles').insert({
+                    id: authUser.id,
+                    full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Usuario',
+                    email: authUser.email,
+                    role: 'tenant'
+                }).select().single();
+                if (createError) throw createError;
+                profile = created;
+            }
+            if (profile.role === 'tenant' && authUser.user_metadata?.requested_role === 'owner') {
+                const { error: ownerError } = await supabaseClient.rpc('request_owner_access');
+                if (ownerError) throw ownerError;
+                profile.role = 'owner';
+            }
+            const isMainAdmin = String(authUser.email || '').trim().toLowerCase() === SUPER_ADMIN_EMAIL;
+            const safeRole = profile.role === 'admin' && !isMainAdmin ? 'owner' : (profile.role || 'tenant');
+            currentUser = {
+                id: authUser.id,
+                name: profile.full_name || authUser.email?.split('@')[0] || 'Usuario',
+                email: authUser.email,
+                role: safeRole,
+                canPublish: ['owner', 'admin'].includes(safeRole),
+                ownerProfile: profile.owner_profile || null,
+                provider: authUser.app_metadata?.provider || 'email'
+            };
+            usersDirectory = [{ id: authUser.id, name: currentUser.name, email: currentUser.email,
+                role: currentUser.role, canPublish: currentUser.canPublish, createdAt: profile.created_at }];
+            localStorage.setItem('af_user', JSON.stringify(currentUser));
+        }
+
+        async function loadCloudData() {
+            if (!supabaseClient) return;
+            const propertyQuery = supabaseClient.from('properties').select('id,payload,created_at,status');
+            const [propsRes, apptsRes, favsRes, profilesRes, verifyRes, reportsRes, paymentsRes, noticesRes] = await Promise.all([
+                (currentUser?.role === 'admin' ? propertyQuery : propertyQuery.eq('status', 'published')).order('created_at', { ascending: false }),
+                currentUser ? supabaseClient.from('appointments').select('id,property_id,property_title,user_name,user_phone,visit_date,visit_time,visit_type,note,status,created_at').order('created_at', { ascending: false }) : Promise.resolve({data:[],error:null}),
+                currentUser ? supabaseClient.from('favorites').select('property_id') : Promise.resolve({data:[],error:null}),
+                currentUser?.role === 'admin' ? supabaseClient.from('profiles').select('id,full_name,email,role,created_at') : Promise.resolve({data:[],error:null}),
+                currentUser?.role === 'admin' ? supabaseClient.from('owner_verifications').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+                currentUser?.role === 'admin' ? supabaseClient.from('property_reports').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+                currentUser ? supabaseClient.from('payment_records').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+                currentUser ? supabaseClient.from('notifications').select('*').order('created_at',{ascending:false}).limit(50) : Promise.resolve({data:[],error:null})
+            ]);
+            for (const result of [propsRes, apptsRes, favsRes, profilesRes, verifyRes, reportsRes, paymentsRes, noticesRes]) if (result.error) throw result.error;
+            ownerVerificationQueue = verifyRes.data || []; propertyReports = reportsRes.data || []; paymentRecords = paymentsRes.data || []; userNotifications = noticesRes.data || [];
+            const cloudProps = (propsRes.data || []).map(row => ({ ...row.payload, id: row.id }));
+            properties = cloudProps;
+            if (currentUser) {
+                if (currentUser.role === 'admin') usersDirectory = (profilesRes.data || []).map(profile => ({
+                    id: profile.id, name: profile.full_name, email: profile.email || '', role: profile.role,
+                    canPublish: ['owner','admin'].includes(profile.role), createdAt: profile.created_at
+                }));
+                appointments = (apptsRes.data || []).map(a => ({ id:a.id, propertyId:a.property_id, propertyTitle:a.property_title,
+                    userName:a.user_name, userPhone:a.user_phone, date:a.visit_date, time:a.visit_time,
+                    type:a.visit_type, note:a.note, status:a.status }));
+                favorites = (favsRes.data || []).map(f => f.property_id);
+            }
+            saveToLocalStorage();
+        }
+
+        function queueCloudWrite(task) {
+            if (!cloudReady || !supabaseClient || !currentUser) return;
+            cloudSyncQueue = cloudSyncQueue.then(task).catch(err => {
+                console.error('Error guardando en Supabase:', err);
+                showToast('No se pudo guardar en la nube. Verifica tu conexión e inténtalo de nuevo.');
+            });
+        }
+
+        async function cloudSaveProperty(property) {
+            if (!cloudReady || !currentUser) return;
+            const payload = { ...property, ownerId: currentUser.id, ownerEmail: currentUser.email };
+            const { error } = await supabaseClient.from('properties').upsert({
+                id: String(property.id), owner_id: currentUser.id, title: property.title,
+                location: property.location, price: Number(property.price) || 0,
+                currency: 'USD', status: 'published', payload
+            }, { onConflict: 'id' });
+            if (error) throw error;
+        }
+
+        async function cloudSaveAppointment(appointment) {
+            if (!cloudReady || !currentUser) return;
+            const { error } = await supabaseClient.from('appointments').insert({
+                id: String(appointment.id), property_id: String(appointment.propertyId),
+                property_title: appointment.propertyTitle, requester_id: currentUser.id,
+                user_name: appointment.userName, user_phone: appointment.userPhone,
+                visit_date: appointment.date, visit_time: appointment.time,
+                visit_type: appointment.type, note: appointment.note, status: 'Pendiente'
+            });
+            if (error) throw error;
+        }
+
+        async function cloudSaveFavorite(propertyId, shouldSave) {
+            if (!cloudReady || !currentUser) return;
+            const query = supabaseClient.from('favorites');
+            const result = shouldSave
+                ? await query.upsert({ user_id: currentUser.id, property_id: String(propertyId) }, { onConflict: 'user_id,property_id' })
+                : await query.delete().eq('user_id', currentUser.id).eq('property_id', String(propertyId));
+            if (result.error) throw result.error;
+        }
+
+        async function cloudSaveReview(propertyId, rating, comment) {
+            if (!cloudReady || !currentUser) return;
+            const { error } = await supabaseClient.from('reviews').upsert({
+                property_id: String(propertyId), author_id: currentUser.id, rating, comment
+            }, { onConflict: 'property_id,author_id' });
+            if (error) throw error;
         }
 
         function loadLocalStorageData() {
@@ -1576,11 +1793,21 @@
 
             const storedUsersDir = localStorage.getItem('af_users_directory');
             usersDirectory = storedUsersDir ? JSON.parse(storedUsersDir) : [];
+            usersDirectory.forEach(u => {
+                if (String(u.email || '').trim().toLowerCase() !== SUPER_ADMIN_EMAIL && u.role === 'admin') {
+                    u.role = 'owner';
+                    u.canPublish = true;
+                }
+            });
             ensureSuperAdminInDirectory();
 
             const storedUser = localStorage.getItem('af_user');
             currentUser = storedUser ? JSON.parse(storedUser) : null;
             if (currentUser && currentUser.email) {
+                if (String(currentUser.email).trim().toLowerCase() !== SUPER_ADMIN_EMAIL && currentUser.role === 'admin') {
+                    currentUser.role = 'owner';
+                    currentUser.canPublish = true;
+                }
                 const isMainAdmin = currentUser.email.toLowerCase() === SUPER_ADMIN_EMAIL;
                 const dirUser = usersDirectory.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
                 if (dirUser) {
@@ -1599,6 +1826,7 @@
         }
 
         function saveToLocalStorage() {
+            // Cache local para modo offline; los datos compartidos se guardan mediante operaciones Supabase explícitas.
             localStorage.setItem('af_properties', JSON.stringify(properties));
             localStorage.setItem('af_favorites', JSON.stringify(favorites));
             localStorage.setItem('af_appointments', JSON.stringify(appointments));
@@ -1652,10 +1880,15 @@
             }
         }
 
-        function handleForgotPassword() {
+        async function handleForgotPassword() {
             const emailInput = document.getElementById('login-email-input').value.trim();
-            const target = emailInput || 'tu correo registrado';
-            showToast(`Enviamos instrucciones de recuperación a ${target}`);
+            if (!emailInput) return showToast('Escribe tu correo para enviarte el enlace de recuperación.');
+            if (cloudReady && supabaseClient) {
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(emailInput, { redirectTo: location.origin + location.pathname });
+                if (error) return showToast(error.message);
+                return showToast('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.');
+            }
+            showToast('Configura Supabase para activar la recuperación segura de contraseña.');
         }
 
         function checkInitialSession() {
@@ -1709,11 +1942,8 @@
         }
 
         function isAdminUser() {
-            return Boolean(
-                currentUser &&
-                currentUser.email &&
-                currentUser.email.toLowerCase() === SUPER_ADMIN_EMAIL
-            );
+            return Boolean(currentUser && currentUser.role === 'admin' &&
+                String(currentUser.email || '').trim().toLowerCase() === SUPER_ADMIN_EMAIL);
         }
 
         function hasPublishAccess() {
@@ -1753,15 +1983,17 @@
                     usersDirectory.push(dirEntry);
                 } else {
                     dirEntry.name = currentUser.name || dirEntry.name;
-                    if (emailLower === SUPER_ADMIN_EMAIL) {
-                        dirEntry.role = 'admin';
-                        dirEntry.canPublish = true;
-                    } else if (dirEntry.role === 'admin') {
-                        dirEntry.role = 'owner';
+                    if (!cloudReady) {
+                        if (emailLower === SUPER_ADMIN_EMAIL) {
+                            dirEntry.role = 'admin';
+                            dirEntry.canPublish = true;
+                        } else if (dirEntry.role === 'admin') {
+                            dirEntry.role = 'owner';
+                        }
                     }
                     currentUser.id = dirEntry.id;
-                    currentUser.role = dirEntry.role;
-                    currentUser.canPublish = dirEntry.role === 'admin' || dirEntry.role === 'owner' || Boolean(dirEntry.canPublish);
+                    if (!cloudReady) currentUser.role = dirEntry.role;
+                    currentUser.canPublish = currentUser.role === 'admin' || currentUser.role === 'owner' || Boolean(dirEntry.canPublish);
                 }
                 ensureSuperAdminInDirectory();
             }
@@ -1772,7 +2004,7 @@
             showToast(welcomeMessage);
         }
 
-        function submitEmailAuth(e) {
+        async function submitEmailAuth(e) {
             e.preventDefault();
             const email = document.getElementById('login-email-input').value.trim();
             const emailLower = email.toLowerCase();
@@ -1783,6 +2015,56 @@
                 showToast('La contraseña debe tener al menos 6 caracteres.');
                 return;
             }
+
+            if (cloudReady && supabaseClient) {
+                const submitButton = document.getElementById('auth-submit-btn');
+                submitButton.disabled = true;
+                submitButton.textContent = 'Conectando...';
+                try {
+                    if (authMode === 'register') {
+                        const { data, error } = await supabaseClient.auth.signUp({
+                            email, password: pass,
+                            options: { data: { full_name: customName || email.split('@')[0], requested_role: selectedLoginRole } }
+                        });
+                        if (error) throw error;
+                        if (!data.session) {
+                            showToast('Cuenta creada. Confirma tu correo para poder iniciar sesión.');
+                            return;
+                        }
+                        await hydrateCloudUser(data.user);
+                        if (selectedLoginRole === 'owner') {
+                            const { error: roleError } = await supabaseClient.rpc('request_owner_access');
+                            if (roleError) throw roleError;
+                            currentUser.role = 'owner'; currentUser.canPublish = true;
+                        }
+                        finalizeAuthenticatedSession(currentUser, `¡Bienvenido a AlquilaAqui, ${currentUser.name}!`);
+                    } else {
+                        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                        if (error) throw error;
+                        await hydrateCloudUser(data.user);
+                        finalizeAuthenticatedSession(currentUser, `¡Bienvenido a AlquilaAqui, ${currentUser.name}!`);
+                    }
+                } catch (err) {
+                    console.error(err);
+                    const authError = String(err?.message || '').toLowerCase();
+                    if (authError.includes('invalid login credentials') || authError.includes('invalid_credentials') || authError.includes('wrong password')) {
+                        showToast('Contraseña incorrecta o correo no registrado. No se inició sesión.');
+                    } else if (authError.includes('email not confirmed')) {
+                        showToast('Debes confirmar tu correo antes de iniciar sesión.');
+                    } else if (authError.includes('too many requests')) {
+                        showToast('Demasiados intentos. Espera unos minutos e inténtalo de nuevo.');
+                    } else {
+                        showToast(err.message || 'No se pudo completar el acceso.');
+                    }
+                } finally {
+                    submitButton.disabled = false;
+                    submitButton.textContent = authMode === 'register' ? 'Crear cuenta en AlquilaAqui' : 'Entrar a AlquilaAqui';
+                }
+                return;
+            }
+
+            // MODO LOCAL (sin base de datos): se conserva el acceso de demostración
+            // anterior. Las cuentas y datos se guardan únicamente en este navegador.
 
             const rawName = email.split('@')[0];
             const fallbackName = emailLower === SUPER_ADMIN_EMAIL
@@ -1828,18 +2110,10 @@
             );
         }
 
-        function loginWithFacebook() {
-            finalizeAuthenticatedSession(
-                {
-                    id: 'user-facebook-guest',
-                    name: 'Usuario Facebook',
-                    email: 'facebook.user@alquilaaqui.com',
-                    role: 'tenant',
-                    canPublish: false,
-                    provider: 'facebook'
-                },
-                'Sesión iniciada con Facebook en AlquilaAqui'
-            );
+        async function loginWithFacebook() {
+            if (!cloudReady || !supabaseClient) return showToast('Activa Supabase y configura Facebook OAuth para habilitar este acceso.');
+            const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'facebook', options: { redirectTo: location.origin + location.pathname } });
+            if (error) showToast(error.message);
         }
 
         function enterAsGuest() {
@@ -1881,6 +2155,8 @@
         // USER AUTHENTICATION UI & LOGIC
         function renderUserNav() {
             const container = document.getElementById('user-nav-container');
+            const unreadBadge = document.getElementById('notification-unread-badge');
+            if (unreadBadge) { const unreadCount = userNotifications.filter(n => !n.read_at).length; unreadBadge.textContent = unreadCount; unreadBadge.classList.toggle('hidden', !unreadCount); unreadBadge.classList.toggle('flex', !!unreadCount); }
             const myListingsTab = document.getElementById('tab-btn-my-listings');
             const adminTab = document.getElementById('tab-btn-admin');
             const myPropsCountBadge = document.getElementById('my-props-count');
@@ -1918,6 +2194,9 @@
 
                 container.innerHTML = `
                     <div class="flex items-center space-x-2">
+                        <button onclick="openNotificationsCenter()" class="relative p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200" title="Notificaciones"><i class="fa-regular fa-bell"></i><span id="notification-unread-badge" class="hidden absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-bold rounded-full min-w-4 h-4 px-1 items-center justify-center">0</span></button>
+                        <button onclick="openInbox()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200" title="Mensajes"><i class="fa-regular fa-comments"></i></button>
+                        <button onclick="openPaymentsCenter()" class="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200" title="Mis pagos"><i class="fa-solid fa-receipt"></i></button>
                         ${adminQuickBtnHTML}
                         ${publishBtnHTML}
                         <span class="text-xs font-semibold hidden md:inline text-gray-700 dark:text-gray-200">${badgeIcon}${currentUser.name}</span>
@@ -1939,7 +2218,11 @@
             }
         }
 
-        function logout() {
+        async function logout() {
+            if (cloudReady && supabaseClient) {
+                const { error } = await supabaseClient.auth.signOut();
+                if (error) showToast(error.message);
+            }
             currentUser = null;
             sessionStorage.removeItem('af_guest');
             saveToLocalStorage();
@@ -2076,6 +2359,7 @@
                             <img src="${p.images[0]}" alt="${p.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <div class="absolute top-3 left-3 flex gap-2">
                                 <span class="bg-primary-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow">${p.type}</span>
+                                ${p.isVerified ? '<span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow"><i class="fa-solid fa-circle-check"></i> Verificada</span>' : ''}
                             </div>
                             <div class="absolute top-3 right-3 flex space-x-1">
                                 <button onclick="toggleCompare('${p.id}')" class="p-2 rounded-full ${isCompared ? 'bg-primary-600 text-white' : 'bg-white/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-300'} hover:scale-110 transition shadow" title="Comparar">
@@ -2120,14 +2404,21 @@
 
         // FAVORITES SYSTEM
         function toggleFavorite(id) {
+            if (cloudReady && !currentUser) {
+                showToast('Inicia sesión para sincronizar tus favoritos.');
+                showLoginScreen();
+                return;
+            }
             const index = favorites.indexOf(id);
-            if (index > -1) {
+            const shouldSave = index === -1;
+            if (!shouldSave) {
                 favorites.splice(index, 1);
                 showToast('Inmueble removido de favoritos');
             } else {
                 favorites.push(id);
                 showToast('Inmueble agregado a favoritos');
             }
+            queueCloudWrite(() => cloudSaveFavorite(id, shouldSave));
             saveToLocalStorage();
             applyFilters();
             renderFavorites();
@@ -2302,6 +2593,11 @@
         function submitReview(e) {
             e.preventDefault();
             if (!activeProperty) return;
+            if (cloudReady && !currentUser) {
+                showToast('Inicia sesión para publicar una reseña.');
+                showLoginScreen();
+                return;
+            }
 
             const rating = parseInt(document.getElementById('review-rating').value);
             const comment = document.getElementById('review-comment').value;
@@ -2312,6 +2608,8 @@
                 rating: rating,
                 comment: comment
             });
+            if (currentUser) queueCloudWrite(() => cloudSaveReview(activeProperty.id, rating, comment));
+            else if (cloudReady) return showToast('Inicia sesión para publicar una reseña.');
 
             saveToLocalStorage();
             renderPropertyReviews();
@@ -2332,6 +2630,11 @@
         function submitAppointmentForm(e) {
             e.preventDefault();
             if (!activeProperty) return;
+            if (cloudReady && !currentUser) {
+                showToast('Inicia sesión para solicitar una visita.');
+                showLoginScreen();
+                return;
+            }
 
             const type = document.querySelector('input[name="app-type"]:checked').value;
             const userName = document.getElementById('app-user-name').value;
@@ -2354,6 +2657,7 @@
             };
 
             appointments.push(newAppt);
+            queueCloudWrite(() => cloudSaveAppointment(newAppt));
             saveToLocalStorage();
 
             closeModal('modal-appointment');
@@ -2567,6 +2871,10 @@
             const app = appointments.find(a => a.id === appId);
             if (app) {
                 app.status = status;
+                queueCloudWrite(async () => {
+                    const { error } = await supabaseClient.from('appointments').update({ status }).eq('id', String(appId));
+                    if (error) throw error;
+                });
                 saveToLocalStorage();
                 renderMyListingsAndAppointments();
                 showToast(`Cita marcada como: ${status}`);
@@ -2644,13 +2952,7 @@
         }
 
         function isOwnerVerified() {
-            return Boolean(
-                currentUser &&
-                currentUser.ownerProfile &&
-                currentUser.ownerProfile.cedula &&
-                currentUser.ownerProfile.phone &&
-                currentUser.ownerProfile.fullName
-            );
+            return Boolean(currentUser && currentUser.ownerProfile && currentUser.ownerProfile.verificationStatus === 'approved');
         }
 
         function openOwnerVerificationModal() {
@@ -2667,34 +2969,26 @@
             openModal('modal-owner-verification');
         }
 
-        function submitOwnerVerification(e) {
+        async function submitOwnerVerification(e) {
             e.preventDefault();
-            if (!currentUser) return;
-
+            if (!currentUser) return showToast('Inicia sesión para enviar tu solicitud.');
+            if (!cloudReady || !supabaseClient) return showToast('Conecta Supabase para enviar la solicitud de verificación segura.');
             const fullName = document.getElementById('verif-fullname').value.trim();
             const cedula = document.getElementById('verif-cedula').value.trim();
             const phone = document.getElementById('verif-phone').value.trim();
             const city = document.getElementById('verif-city').value.trim();
             const roleType = document.getElementById('verif-role-type').value;
             const address = document.getElementById('verif-address').value.trim();
-
+            if (!fullName || !cedula || !phone || !city || !address || !document.getElementById('verif-terms').checked) return showToast('Completa los datos y acepta la declaración.');
+            const { error } = await supabaseClient.from('owner_verifications').insert({
+                user_id: currentUser.id, legal_name: fullName, id_document_last4: cedula.replace(/\D/g,'').slice(-4), phone, city, address, status: 'pending'
+            });
+            if (error) return showToast('No se pudo enviar: ' + error.message);
+            currentUser.ownerProfile = { fullName, phone, city, roleType, address, verificationStatus: 'pending' };
             currentUser.name = fullName;
-            currentUser.ownerProfile = {
-                fullName,
-                cedula,
-                phone,
-                city,
-                roleType,
-                address,
-                verifiedAt: new Date().toISOString()
-            };
-
-            saveToLocalStorage();
-            renderUserNav();
-            closeModal('modal-owner-verification');
-            showToast('¡Datos verificados! Ahora completa los detalles del inmueble.');
-            openModal('modal-publish');
-            initPublishMap();
+            saveToLocalStorage(); renderUserNav(); closeModal('modal-owner-verification');
+            await createUserNotification('Solicitud recibida', 'Tu verificación está pendiente de revisión.', 'verification');
+            showToast('Solicitud enviada. Podrás publicar cuando administración la apruebe.');
         }
 
         function openPublishModal() {
@@ -2764,6 +3058,7 @@
             };
 
             properties.unshift(newProperty);
+            queueCloudWrite(() => cloudSaveProperty(newProperty));
             saveToLocalStorage();
             renderUserNav();
             applyFilters();
@@ -2779,7 +3074,13 @@
         }
 
 
-        // ADMIN PANEL FUNCTIONS (yorielsanchez5@gmail.com)
+        // ADMIN PANEL FUNCTIONS
+        function scrollAdminTo(sectionId) {
+            if (!isAdminUser()) return;
+            const section = document.getElementById(sectionId);
+            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function renderAdminPanel() {
             if (!isAdminUser()) {
                 const adminTab = document.getElementById('tab-btn-admin');
@@ -2837,7 +3138,6 @@
                                     : `<select onchange="changeUserRole('${u.email}', this.value)" class="p-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-xs dark:text-white">
                                             <option value="owner" ${u.role === 'owner' ? 'selected' : ''}>Propietario (Puede Publicar)</option>
                                             <option value="tenant" ${u.role === 'tenant' ? 'selected' : ''}>Inquilino (Sin Publicar)</option>
-                                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrador</option>
                                        </select>`
                                 }
                             </td>
@@ -2899,15 +3199,22 @@
                             <button onclick="openPropertyDetail('${p.id}')" class="flex-1 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 text-gray-800 dark:text-white text-xs font-semibold py-1.5 rounded-lg transition">
                                 Ver
                             </button>
-                            <button onclick="openContractModal('${p.id}')" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold py-1.5 rounded-lg transition">
-                                Contrato
-                            </button>
+                            <button onclick="openContractModal('${p.id}')" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold py-1.5 rounded-lg transition">Contrato</button>
+                            ${isAdminUser() && cloudReady ? `<button onclick="adminSetPropertyVerified('${p.id}', ${!p.isVerified})" class="flex-1 ${p.isVerified?'bg-gray-200 text-gray-700':'bg-emerald-600 text-white'} text-xs font-semibold py-1.5 rounded-lg">${p.isVerified?'Quitar sello':'Verificar'}</button>` : ''}
                             <button onclick="deleteProperty('${p.id}')" class="bg-red-100 text-red-600 hover:bg-red-200 px-2.5 py-1.5 rounded-lg transition" title="Eliminar Publicación">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
                     </div>
                 `).join('');
+            renderAdminPremiumSections();
+        }
+
+        function renderAdminPremiumSections(){
+            const v=document.getElementById('admin-verifications-list'); if(v)v.innerHTML=ownerVerificationQueue.length?ownerVerificationQueue.map(x=>`<div class="p-3 border dark:border-gray-700 rounded-xl flex flex-wrap justify-between gap-3"><div><b class="text-sm">${escapeHtmlAA(x.legal_name)}</b><p class="text-xs text-gray-500">${escapeHtmlAA(x.city||'')} · Documento terminado en ${escapeHtmlAA(x.id_document_last4||'----')} · ${x.status}</p><p class="text-xs">${escapeHtmlAA(x.phone||'')} ${escapeHtmlAA(x.address||'')}</p></div>${x.status==='pending'?`<div class="flex gap-2"><button onclick="adminReviewOwnerVerification('${x.id}','approved')" class="bg-emerald-600 text-white rounded-lg px-3 py-2 text-xs">Aprobar</button><button onclick="adminReviewOwnerVerification('${x.id}','rejected')" class="bg-rose-600 text-white rounded-lg px-3 py-2 text-xs">Rechazar</button></div>`:''}</div>`).join(''):'<p class="text-xs text-gray-400">No hay solicitudes de verificación.</p>';
+            const r=document.getElementById('admin-reports-list'); if(r)r.innerHTML=propertyReports.length?propertyReports.map(x=>`<div class="p-3 border dark:border-gray-700 rounded-xl flex flex-wrap justify-between gap-2"><div><b class="text-sm">${escapeHtmlAA(x.reason)}</b><p class="text-xs text-gray-500">Inmueble: ${escapeHtmlAA(x.property_id)} · ${x.status}</p><p class="text-xs">${escapeHtmlAA(x.details)}</p></div>${x.status==='open'?`<div class="flex gap-2"><button onclick="adminResolveReport('${x.id}','reviewed')" class="bg-amber-500 text-white rounded-lg px-3 py-2 text-xs">Marcar revisada</button><button onclick="adminResolveReport('${x.id}','dismissed')" class="bg-gray-500 text-white rounded-lg px-3 py-2 text-xs">Descartar</button></div>`:''}</div>`).join(''):'<p class="text-xs text-gray-400">No hay denuncias registradas.</p>';
+            const pay=document.getElementById('admin-payments-list'); if(pay)pay.innerHTML=paymentRecords.length?paymentRecords.map(x=>`<div class="p-3 border dark:border-gray-700 rounded-xl flex justify-between"><div><b class="text-sm">${Number(x.amount).toLocaleString()} ${x.currency}</b><p class="text-xs text-gray-500">${x.period||'Alquiler'} · ${x.status}</p></div><span class="text-xs">${new Date(x.created_at).toLocaleDateString('es-DO')}</span></div>`).join(''):'<p class="text-xs text-gray-400">No hay pagos registrados.</p>';
+            const audit=document.getElementById('admin-audit-list'); if(audit&&cloudReady){supabaseClient.from('admin_audit_logs').select('*').order('created_at',{ascending:false}).limit(30).then(({data,error})=>{if(!error&&data?.length)audit.innerHTML=data.map(a=>`<div class="text-xs border-b dark:border-gray-700 py-2"><b>${escapeHtmlAA(a.action)}</b><span class="text-gray-400"> · ${new Date(a.created_at).toLocaleString('es-DO')}</span></div>`).join('');});}
         }
 
         function adminSetAppointmentStatus(appId, status) {
@@ -2915,6 +3222,10 @@
             const app = appointments.find(a => a.id === appId);
             if (app) {
                 app.status = status;
+                queueCloudWrite(async () => {
+                    const { error } = await supabaseClient.from('appointments').update({ status }).eq('id', String(appId));
+                    if (error) throw error;
+                });
                 saveToLocalStorage();
                 renderAdminPanel();
                 if (!document.getElementById('view-my-listings').classList.contains('hidden')) {
@@ -2927,6 +3238,10 @@
         function adminDeleteAppointment(appId) {
             if (!isAdminUser()) return;
             appointments = appointments.filter(a => a.id !== appId);
+            queueCloudWrite(async () => {
+                const { error } = await supabaseClient.from('appointments').delete().eq('id', String(appId));
+                if (error) throw error;
+            });
             saveToLocalStorage();
             renderAdminPanel();
             showToast('Cita eliminada del registro.');
@@ -2936,7 +3251,7 @@
             if (!isAdminUser()) return;
             const payload = {
                 exportedAt: new Date().toISOString(),
-                admin: SUPER_ADMIN_EMAIL,
+                admin: currentUser?.email || 'Administrador',
                 usersDirectory,
                 properties,
                 appointments
@@ -2975,22 +3290,31 @@
             showToast('Datos de demostración restaurados.');
         }
 
-        function changeUserRole(email, newRole) {
-            if (!isAdminUser()) return;
-            const emailLower = email.toLowerCase();
+        async function changeUserRole(email, newRole) {
+            if (!isAdminUser() || !['tenant', 'owner'].includes(newRole)) return;
+            const emailLower = String(email || '').toLowerCase();
             if (emailLower === SUPER_ADMIN_EMAIL) return;
 
-            const userEntry = usersDirectory.find(u => u.email.toLowerCase() === emailLower);
-            if (userEntry) {
-                userEntry.role = newRole;
-                userEntry.canPublish = (newRole === 'owner' || newRole === 'admin');
-                saveToLocalStorage();
-                renderAdminPanel();
-                showToast(`Rol de ${userEntry.name || email} actualizado a ${newRole.toUpperCase()}.`);
+            const userEntry = usersDirectory.find(u => (u.email || '').toLowerCase() === emailLower);
+            if (!userEntry) return;
+
+            if (cloudReady && supabaseClient) {
+                const { error } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userEntry.id);
+                if (error) {
+                    showToast('No se pudo guardar el rol: ' + error.message);
+                    renderAdminPanel();
+                    return;
+                }
             }
+
+            userEntry.role = newRole;
+            userEntry.canPublish = newRole === 'owner' || newRole === 'admin';
+            saveToLocalStorage();
+            renderAdminPanel();
+            showToast(`Rol de ${userEntry.name || email} actualizado a ${newRole.toUpperCase()}.`);
         }
 
-        function adminAddOrAssignUser(e) {
+        async function adminAddOrAssignUser(e) {
             e.preventDefault();
             if (!isAdminUser()) return;
 
@@ -3001,6 +3325,27 @@
             const role = roleSelect.value;
 
             if (!email) return;
+            if (!['tenant', 'owner'].includes(role)) {
+                showToast('Solo la cuenta principal puede ser administradora.');
+                return;
+            }
+
+            if (cloudReady) {
+                const existingCloudUser = usersDirectory.find(u => u.email && u.email.toLowerCase() === emailLower);
+                if (!existingCloudUser) {
+                    showToast('Ese usuario debe crear su cuenta primero. Después podrás asignarle el rol.');
+                    return;
+                }
+                const { error } = await supabaseClient.from('profiles').update({ role }).eq('id', existingCloudUser.id);
+                if (error) return showToast(error.message || 'No se pudo cambiar el rol.');
+                existingCloudUser.role = role;
+                existingCloudUser.canPublish = role === 'owner' || role === 'admin';
+                emailInput.value = '';
+                await loadCloudData();
+                renderAdminPanel();
+                showToast(`Rol actualizado para ${email}.`);
+                return;
+            }
 
             let existing = usersDirectory.find(u => u.email.toLowerCase() === emailLower);
             if (existing) {
@@ -3030,12 +3375,20 @@
             emailInput.value = '';
             saveToLocalStorage();
             renderAdminPanel();
-            showToast(`Rol asignado correctamente a ${email}.`);
+            if (cloudReady) {
+                showToast('La asignación de roles en la nube debe hacerse desde el panel seguro de Supabase; no se cambia desde este navegador.');
+            } else {
+                showToast(`Rol asignado localmente a ${email}.`);
+            }
         }
 
         function deleteProperty(id) {
             if (confirm('¿Estás seguro de que deseas eliminar este anuncio?')) {
                 properties = properties.filter(p => p.id !== id);
+                queueCloudWrite(async () => {
+                    const { error } = await supabaseClient.from('properties').update({ status: 'archived' }).eq('id', String(id)).eq('owner_id', currentUser.id);
+                    if (error) throw error;
+                });
                 saveToLocalStorage();
                 renderUserNav();
                 applyFilters();
@@ -3045,8 +3398,30 @@
             }
         }
 
-        function saveCurrentSearchAlert() {
-            showToast('🔔 ¡Alerta guardada! Te avisaremos cuando se publiquen propiedades con estos criterios.');
+        async function saveCurrentSearchAlert() {
+            if (!currentUser) {
+                showToast('Inicia sesión para guardar alertas de búsqueda.');
+                showLoginScreen();
+                return;
+            }
+            const filters = {
+                location: document.getElementById('filter-location')?.value || '',
+                type: document.getElementById('filter-type')?.value || '',
+                maxPrice: document.getElementById('filter-max-price')?.value || '',
+                rooms: document.getElementById('filter-rooms')?.value || ''
+            };
+            if (cloudReady) {
+                const { error } = await supabaseClient.from('saved_searches').insert({
+                    user_id: currentUser.id, label: 'Alerta de búsqueda', filters, alerts_enabled: true
+                });
+                if (error) return showToast(error.message || 'No se pudo guardar la alerta.');
+                showToast('Alerta guardada en tu cuenta. Las notificaciones automáticas se activarán en la siguiente fase.');
+            } else {
+                const saved = JSON.parse(localStorage.getItem('af_saved_searches') || '[]');
+                saved.push({ filters, createdAt: new Date().toISOString() });
+                localStorage.setItem('af_saved_searches', JSON.stringify(saved));
+                showToast('Búsqueda guardada en este dispositivo.');
+            }
         }
 
         function openModal(id) {
@@ -3056,6 +3431,62 @@
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
         }
+
+        // ====== FUNCIONES PREMIUM: CHAT, ALERTAS, REPORTES, PAGOS Y MODERACIÓN ======
+        function openFlexModal(id) { const el=document.getElementById(id); if(el){el.classList.remove('hidden');el.classList.add('flex');} }
+        function closeFlexModal(id) { const el=document.getElementById(id); if(el){el.classList.add('hidden');el.classList.remove('flex');} }
+        async function createUserNotification(title, body, type='general') {
+            if (!cloudReady || !currentUser) return;
+            const { error } = await supabaseClient.from('notifications').insert({user_id:currentUser.id,title,body,type});
+            if (error) console.warn('No se pudo crear notificación', error.message);
+        }
+        async function openNotificationsCenter() {
+            if (!currentUser) return showToast('Inicia sesión para ver tus notificaciones.');
+            if (cloudReady) {
+                const {data,error}=await supabaseClient.from('notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(50);
+                if(error) return showToast(error.message); userNotifications=data||[];
+            }
+            const unread=userNotifications.filter(n=>!n.read_at).length;
+            const badge=document.getElementById('notification-unread-badge'); if(badge){badge.textContent=unread;badge.classList.toggle('hidden',!unread);badge.classList.toggle('flex',!!unread);}
+            const list=document.getElementById('notifications-list');
+            list.innerHTML=userNotifications.length?userNotifications.map(n=>`<div class="p-3 rounded-xl border dark:border-gray-700 ${n.read_at?'opacity-60':'bg-teal-50 dark:bg-teal-950/30'}"><div class="font-bold text-sm">${escapeHtmlAA(n.title)}</div><p class="text-xs text-gray-600 dark:text-gray-300 mt-1">${escapeHtmlAA(n.body)}</p><div class="text-[10px] text-gray-400 mt-2">${new Date(n.created_at).toLocaleString('es-DO')}</div>${!n.read_at?`<button onclick="markNotificationRead('${n.id}')" class="text-xs text-teal-700 dark:text-teal-300 font-bold mt-2">Marcar como leída</button>`:''}</div>`).join(''):'<p class="text-sm text-gray-400">No tienes notificaciones.</p>';
+            openFlexModal('modal-notifications');
+        }
+        async function markNotificationRead(id){ if(!cloudReady)return; const {error}=await supabaseClient.from('notifications').update({read_at:new Date().toISOString()}).eq('id',id).eq('user_id',currentUser.id); if(error)return showToast(error.message); await openNotificationsCenter(); }
+        function escapeHtmlAA(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+        async function openInbox(){
+            if(!currentUser)return showToast('Inicia sesión para usar los mensajes.');
+            if(!cloudReady)return showToast('Conecta Supabase para activar el chat seguro.');
+            openFlexModal('modal-inbox');
+            const {data,error}=await supabaseClient.from('conversations').select('id,property_id,tenant_id,owner_id,created_at,properties(title)').order('created_at',{ascending:false});
+            if(error)return showToast(error.message);
+            const box=document.getElementById('inbox-conversations');
+            box.innerHTML=(data||[]).length?(data||[]).map(c=>`<button onclick="loadChatConversation('${c.id}')" class="w-full text-left p-3 rounded-xl border dark:border-gray-700 hover:bg-teal-50 dark:hover:bg-gray-700"><div class="font-bold text-xs">${escapeHtmlAA(c.properties?.title||'Conversación')}</div><div class="text-[10px] text-gray-400">${c.tenant_id===currentUser.id?'Tú eres inquilino':'Tú eres propietario'}</div></button>`).join(''):'<p class="text-xs text-gray-400">Aún no tienes conversaciones. Abre una propiedad y pulsa Chat.</p>';
+        }
+        async function startPropertyChat(){
+            if(!currentUser)return showToast('Inicia sesión para contactar al propietario.');
+            if(!cloudReady)return showToast('El chat requiere Supabase conectado.');
+            const ownerId=activeProperty?.ownerId; if(!ownerId||ownerId===currentUser.id)return showToast('No se puede abrir un chat con esta cuenta.');
+            let {data,error}=await supabaseClient.from('conversations').select('id').eq('property_id',String(activeProperty.id)).eq('tenant_id',currentUser.id).eq('owner_id',ownerId).maybeSingle();
+            if(error)return showToast(error.message);
+            if(!data){const ins=await supabaseClient.from('conversations').insert({property_id:String(activeProperty.id),tenant_id:currentUser.id,owner_id:ownerId}).select('id').single(); if(ins.error)return showToast(ins.error.message); data=ins.data;}
+            activeConversationId=data.id; closeModal('modal-detail'); await openInbox(); await loadChatConversation(activeConversationId);
+        }
+        async function loadChatConversation(id){
+            activeConversationId=id; const {data,error}=await supabaseClient.from('messages').select('*').eq('conversation_id',id).order('created_at',{ascending:true});
+            if(error)return showToast(error.message);
+            document.getElementById('inbox-messages').innerHTML=(data||[]).map(m=>`<div class="flex ${m.sender_id===currentUser.id?'justify-end':'justify-start'}"><div class="max-w-[85%] rounded-2xl px-3 py-2 text-xs ${m.sender_id===currentUser.id?'bg-teal-600 text-white':'bg-gray-100 dark:bg-gray-700'}"><p>${escapeHtmlAA(m.body)}</p><div class="text-[9px] opacity-70 mt-1">${new Date(m.created_at).toLocaleString('es-DO')}</div></div></div>`).join('')||'<p class="text-xs text-gray-400">Envía el primer mensaje.</p>';
+            const unread=(data||[]).filter(m=>m.sender_id!==currentUser.id&&!m.read_at).map(m=>m.id); if(unread.length) await supabaseClient.from('messages').update({read_at:new Date().toISOString()}).in('id',unread);
+            const pane=document.getElementById('inbox-messages'); pane.scrollTop=pane.scrollHeight;
+        }
+        async function sendChatMessage(e){e.preventDefault(); const input=document.getElementById('chat-message-input'); const body=input.value.trim(); if(!body||!activeConversationId||!cloudReady)return; const {error}=await supabaseClient.from('messages').insert({conversation_id:activeConversationId,sender_id:currentUser.id,body}); if(error)return showToast(error.message); input.value=''; await loadChatConversation(activeConversationId);}
+        function reportActiveProperty(){if(!currentUser)return showToast('Inicia sesión para denunciar.'); if(!activeProperty)return; document.getElementById('report-property-name').textContent=activeProperty.title; openFlexModal('modal-report-property');}
+        async function submitPropertyReport(e){e.preventDefault(); if(!cloudReady||!currentUser)return showToast('La denuncia segura requiere una cuenta conectada a Supabase.'); const {error}=await supabaseClient.from('property_reports').insert({property_id:String(activeProperty.id),reporter_id:currentUser.id,reason:document.getElementById('report-reason').value,details:document.getElementById('report-details').value.trim()}); if(error)return showToast(error.message); closeFlexModal('modal-report-property'); document.getElementById('report-details').value=''; showToast('Denuncia enviada al equipo de moderación.');}
+        async function openPaymentsCenter(){if(!currentUser)return showToast('Inicia sesión para consultar pagos.'); if(cloudReady){const {data,error}=await supabaseClient.from('payment_records').select('*').eq('payer_id',currentUser.id).order('created_at',{ascending:false});if(error)return showToast(error.message);paymentRecords=data||[];} document.getElementById('user-payments-list').innerHTML=paymentRecords.filter(p=>p.payer_id===currentUser.id).map(p=>`<div class="p-3 rounded-xl border dark:border-gray-700"><div class="flex justify-between"><b class="text-sm">${Number(p.amount).toLocaleString()} ${p.currency}</b><span class="text-xs font-bold">${p.status}</span></div><p class="text-xs text-gray-500 mt-1">${p.period||'Pago de alquiler'} · ${new Date(p.created_at).toLocaleDateString('es-DO')}</p></div>`).join('')||'<p class="text-sm text-gray-400">No tienes pagos registrados todavía.</p>';openFlexModal('modal-payments');}
+        async function adminReviewOwnerVerification(id,status){if(!isAdminUser()||!cloudReady)return;const {error}=await supabaseClient.from('owner_verifications').update({status,reviewer_id:currentUser.id,reviewer_note:status==='approved'?'Identidad revisada y aprobada.':'Solicitud no aprobada.'}).eq('id',id);if(error)return showToast(error.message);await loadCloudData();renderAdminPanel();adminAudit('owner_verification_'+status,{verification_id:id});showToast('Solicitud actualizada y notificación enviada.');}
+        async function adminSetPropertyVerified(id,verified){if(!isAdminUser()||!cloudReady)return;const prop=properties.find(p=>String(p.id)===String(id));if(!prop)return;const payload={...prop,isVerified:verified};const {error}=await supabaseClient.from('properties').update({payload}).eq('id',String(id));if(error)return showToast(error.message);prop.isVerified=verified;await adminAudit(verified?'property_verified':'property_unverified',{property_id:id});applyFilters();renderAdminPanel();}
+        async function adminResolveReport(id,status){if(!isAdminUser()||!cloudReady)return;const {error}=await supabaseClient.from('property_reports').update({status,resolved_by:currentUser.id}).eq('id',id);if(error)return showToast(error.message);await loadCloudData();renderAdminPanel();await adminAudit('report_'+status,{report_id:id});}
+        async function adminAudit(action,details={}){if(!cloudReady||!isAdminUser())return;const {error}=await supabaseClient.from('admin_audit_logs').insert({admin_id:currentUser.id,action,details});if(error)console.warn('Audit log:',error.message);}
 
         function showToast(msg) {
             const toast = document.createElement('div');
